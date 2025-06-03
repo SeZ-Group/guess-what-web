@@ -34,7 +34,8 @@ class TodayWordInfoView(APIView):
         today = date.today()
         daily_word = get_object_or_404(DailyWord, date=today)
         data = DailyWordSerializer(daily_word).data
-        data.pop('word')  # Don't reveal the word
+        data.pop('word', None)  # Remove the word from the response
+        data['word_length'] = len(daily_word.word)
         return Response(data)
 
 # User: Submit a guess
