@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getTodayWordInfo, submitGuess, getGuesses } from '../api/gameApi';
+import html2canvas from 'html2canvas';
 
 const USER_ID_KEY = 'guess-what-user-id';
 function getUserId() {
@@ -31,6 +32,8 @@ export default function Game() {
   const [error, setError] = useState('');
   const userId = getUserId();
   const inputRefs = useRef([]);
+  const gameRef = useRef(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     getTodayWordInfo().then(data => {
@@ -102,8 +105,50 @@ export default function Game() {
   const isWin = lastGuess && isSuccess(lastGuess.result, wordLength);
   const isFail = guesses.length === maxAttempts && !isWin;
 
+  // Open share modal automatically on win
+  useEffect(() => {
+    if (isWin) setShowShareModal(true);
+  }, [isWin]);
+
+  // Share handler
+  const handleShare = async () => {
+    if (!gameRef.current) return;
+    const canvas = await html2canvas(gameRef.current, {useCORS: true, backgroundColor: null});
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], 'guess-what-result.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'نتیجه بازی حدس کلمه!',
+            text: 'من تونستم کلمه امروز رو تو بازی حدس کلمه پیدا کنم! تو هم امتحان کن!'
+          });
+        } catch (err) {
+          // کاربر شیر را کنسل کرد
+        }
+      } else {
+        // دانلود تصویر برای کاربرانی که Web Share ندارند
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'guess-what-result.png';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    }, 'image/png');
+    setShowShareModal(false);
+  };
+
+  // Close modal on outside click
+  const handleModalBackgroundClick = (e) => {
+    if (e.target.classList.contains('share-modal-bg')) {
+      setShowShareModal(false);
+    }
+  };
+
   return (
-    <div className="game-container">
+    <div className="game-container" ref={gameRef}>
       <div className="logo-title">
         <h2>Guess What?</h2>
         <span className="logo-emoji" role="img" aria-label="guess">🤔</span>
@@ -114,15 +159,29 @@ export default function Game() {
           <div className="guess-number">حدس <span>{guesses.length + 1}</span> از <span>{maxAttempts}</span></div>
         </div>
       )}
-      {isWin && <div className="success-message" dir='rtl'>🎉 عالی بودی!</div>}
+      {isWin && (
+        <>
+          <div className="success-message" dir='rtl'>🎉 عالی بودی!</div>
+        </>
+      )}
       {isFail && (
         <div className="fail-message" dir='rtl'>
            نشد دیگه فدای سرت. 😢<br />
           فردا یه روزه جدیده با یه کلمه جدید.
         </div>
       )}
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="share-modal-bg" onClick={handleModalBackgroundClick}>
+          <div className="share-modal" dir="rtl">
+            <button className="close-modal" onClick={() => setShowShareModal(false)} title="بستن">×</button>
+            <div className="share-modal-title">دوست داری نتیجه‌ات رو با بقیه به اشتراک بذاری؟</div>
+            <button className="share-btn-modal" onClick={handleShare}>اشتراک‌گذاری</button>
+          </div>
+        </div>
+      )}
       <form onSubmit={handleGuess} autoComplete="off">
-        <div className="input-row">
+        <div className="input-row" dir="rtl">
           {guessArr.map((char, i) => (
             <input
               key={i}
@@ -135,7 +194,7 @@ export default function Game() {
               maxLength={1}
               autoFocus={i === 0}
               disabled={guesses.length >= maxAttempts || isWin || isFail}
-              style={{ textAlign: 'center', textTransform: 'uppercase', direction: 'rtl', fontFamily: 'Vazirmatn, Tahoma, Arial, sans-serif', fontWeight: 800, fontSize: '1.7em', letterSpacing: '0.05em', color: '#1976d2' }}
+              style={{ textAlign: 'center', direction: 'rtl', textTransform: 'uppercase', fontFamily: 'Vazirmatn, Tahoma, Arial, sans-serif', fontWeight: 800, fontSize: '1.7em', letterSpacing: '0.05em', color: '#1976d2', verticalAlign: 'middle' }}
             />
           ))}
         </div>
@@ -143,9 +202,9 @@ export default function Game() {
       </form>
       {error && <div className="error">{error}</div>}
       {hint && <div className="hint">راهنما: {hint}</div>}
-      <div className="guesses-list">
+      <div className="guesses-list" dir="rtl">
         {guesses.map((g, idx) => (
-          <div key={idx} className="guess-row">
+          <div key={idx} className="guess-row" dir="rtl">
             {g.guess.split('').map((letter, i) => (
               <span key={i} className={`letter-box ${colorClass(g.result[i])}`}>{letter.toUpperCase()}</span>
             ))}
@@ -223,6 +282,8 @@ export default function Game() {
           border-radius: 10px;
           box-shadow: 0 2px 8px 0 #e0e7ef22;
           transition: border 0.2s, box-shadow 0.2s;
+          text-align: center;
+          vertical-align: middle;
         }
         .input-char:focus {
           border: 2px solid #1976d2;
@@ -235,8 +296,16 @@ export default function Game() {
         .hint { color: #1976d2; margin-top: 1em; text-align: center; font-weight: bold; }
         .success-message { color: #388e3c; background: #e8f5e9; border: 1px solid #388e3c; border-radius: 10px; padding: 1em; margin: 1em 0; text-align: center; font-size: 1.15em; font-weight: bold; box-shadow: 0 2px 8px 0 #388e3c22; }
         .fail-message { color: #b71c1c; background: #ffebee; border: 1px solid #b71c1c; border-radius: 10px; padding: 1em; margin: 1em 0; text-align: center; font-size: 1.15em; font-weight: bold; box-shadow: 0 2px 8px 0 #b71c1c22; }
-        .guesses-list { margin-top: 1.7em; }
-        .guess-row { margin-bottom: 0.5em; display: flex; justify-content: center; }
+        .guesses-list {
+          margin-top: 1.7em;
+          direction: rtl;
+        }
+        .guess-row {
+          margin-bottom: 0.5em;
+          display: flex;
+          justify-content: center;
+          direction: rtl;
+        }
         .input-row {
           display: flex;
           justify-content: center;
@@ -284,6 +353,86 @@ export default function Game() {
           font-size: 1.2em;
           font-weight: 900;
           color: #fff;
+        }
+        .share-btn {
+          width: 100%;
+          margin: 1em auto 0 auto;
+          display: block;
+          background: linear-gradient(90deg, #43a047 0%, #64b5f6 100%);
+          color: #fff;
+          border: none;
+          border-radius: 10px;
+          padding: 0.9em 0;
+          font-size: 1.1em;
+          font-weight: bold;
+          cursor: pointer;
+          box-shadow: 0 2px 8px 0 #43a04722;
+          transition: background 0.2s, box-shadow 0.2s;
+        }
+        .share-btn:hover {
+          background: linear-gradient(90deg, #388e3c 0%, #42a5f5 100%);
+          box-shadow: 0 4px 16px 0 #43a04744;
+        }
+        .share-modal-bg {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(30,40,60,0.25);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .share-modal {
+          background: #fff;
+          border-radius: 16px;
+          box-shadow: 0 8px 32px 0 #1976d244;
+          padding: 2.2em 1.5em 1.5em 1.5em;
+          min-width: 320px;
+          max-width: 90vw;
+          position: relative;
+          text-align: center;
+        }
+        .close-modal {
+          position: absolute;
+          top: 0.7em;
+          left: 0.7em;
+          background: none;
+          border: none;
+          font-size: 2em;
+          color: #888;
+          cursor: pointer;
+          transition: color 0.2s;
+        }
+        .close-modal:hover {
+          color: #d32f2f;
+        }
+        .share-modal-title {
+          font-size: 1.2em;
+          font-weight: bold;
+          margin-bottom: 1.2em;
+          color: #1976d2;
+        }
+        .share-btn-modal {
+          width: 100%;
+          background: linear-gradient(90deg, #43a047 0%, #64b5f6 100%);
+          color: #fff;
+          border: none;
+          border-radius: 10px;
+          padding: 0.9em 0;
+          font-size: 1.1em;
+          font-weight: bold;
+          cursor: pointer;
+          box-shadow: 0 2px 8px 0 #43a04722;
+          transition: background 0.2s, box-shadow 0.2s;
+          margin-bottom: 1em;
+        }
+        .share-btn-modal:hover {
+          background: linear-gradient(90deg, #388e3c 0%, #42a5f5 100%);
+          box-shadow: 0 4px 16px 0 #43a04744;
+        }
+        .share-modal-tip {
+          color: #888;
+          font-size: 0.98em;
         }
       `}</style>
     </div>
