@@ -174,7 +174,7 @@ export default function Game() {
       {showShareModal && (
         <div className="share-modal-bg" onClick={handleModalBackgroundClick}>
           <div className="share-modal" dir="rtl">
-            <button className="close-modal" onClick={() => setShowShareModal(false)} title="بستن">×</button>
+            <button className="close-modal" onClick={() => setShowShareModal(false)} title="بستن" style={{right: '0.7em', left: 'unset'}}>&times;</button>
             <div className="share-modal-title">دوست داری نتیجه‌ات رو با بقیه به اشتراک بذاری؟</div>
             <button className="share-btn-modal" onClick={handleShare}>اشتراک‌گذاری</button>
           </div>
@@ -395,7 +395,7 @@ export default function Game() {
         .close-modal {
           position: absolute;
           top: 0.7em;
-          left: 0.7em;
+          right: 0.7em;
           background: none;
           border: none;
           font-size: 2em;
