@@ -25,7 +25,11 @@ SECRET_KEY = 'django-insecure-vigsd8535+vb&bt4(0lo%vvkhp&0d0v)&-4=0h(#283x1b7+b2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "guesswhatserver.darkube.app",
+    "localhost",
+    "127.0.0.1"
+]
 
 
 # Application definition
@@ -51,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'guesswhat.urls'
