@@ -19,7 +19,7 @@ COPY server/guesswhat/ .
 EXPOSE 8000
 
 # Collect static files (optional, if you use static files)
-RUN python server/guesswhat/manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput
 
 # Start server with gunicorn
 CMD ["gunicorn", "guesswhat.wsgi:application", "--bind", "0.0.0.0:8000"] 
