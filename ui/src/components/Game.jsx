@@ -117,7 +117,7 @@ export default function Game() {
   // Share handler
   const handleShare = async () => {
     if (!gameRef.current) return;
-    // Hide letters before screenshot
+    // Hide letters before screenshot (clear them)
     const guessRows = gameRef.current.querySelectorAll('.guesses-list .guess-row');
     const originalLetters = [];
     guessRows.forEach(row => {
@@ -125,46 +125,43 @@ export default function Game() {
       const rowLetters = [];
       spans.forEach(span => {
         rowLetters.push(span.textContent);
-        span.textContent = '●';
+        span.textContent = '';
       });
       originalLetters.push(rowLetters);
     });
-    // Capture only the guesses-list
-    const guessesList = gameRef.current.querySelector('.guesses-list');
-    if (guessesList) {
-      await html2canvas(guessesList, {useCORS: true, backgroundColor: null}).then(canvas => {
-        canvas.toBlob(async (blob) => {
-          // Restore original letters
-          guessRows.forEach((row, i) => {
-            const spans = row.querySelectorAll('.letter-box');
-            spans.forEach((span, j) => {
-              span.textContent = originalLetters[i][j];
-            });
+    // Capture the whole game container
+    await html2canvas(gameRef.current, {useCORS: true, backgroundColor: null}).then(canvas => {
+      canvas.toBlob(async (blob) => {
+        // Restore original letters
+        guessRows.forEach((row, i) => {
+          const spans = row.querySelectorAll('.letter-box');
+          spans.forEach((span, j) => {
+            span.textContent = originalLetters[i][j];
           });
-          if (!blob) return;
-          const file = new File([blob], 'guess-what-result.png', { type: 'image/png' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            try {
-              await navigator.share({
-                files: [file],
-                title: 'نتیجه بازی حدس کلمه!',
-                text: 'من تونستم کلمه امروز رو تو بازی حدس کلمه پیدا کنم! تو هم امتحان کن!'
-              });
-            } catch (err) {
-              // کاربر شیر را کنسل کرد
-            }
-          } else {
-            // دانلود تصویر برای کاربرانی که Web Share ندارند
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'guess-what-result.png';
-            a.click();
-            URL.revokeObjectURL(url);
+        });
+        if (!blob) return;
+        const file = new File([blob], 'guess-what-result.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'نتیجه بازی حدس کلمه!',
+              text: 'https://guesswhat.darkube.app/'
+            });
+          } catch (err) {
+            // کاربر شیر را کنسل کرد
           }
-        }, 'image/png');
-      });
-    }
+        } else {
+          // دانلود تصویر برای کاربرانی که Web Share ندارند
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'guess-what-result.png';
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }, 'image/png');
+    });
     setShowShareModal(false);
   };
 
@@ -231,7 +228,7 @@ export default function Game() {
         <button type="submit" disabled={guesses.length >= maxAttempts || guessArr.includes('') || isWin || isFail}> حدس بزن</button>
       </form>
       {error && <div className="error">{error}</div>}
-      {hint && <div className="hint">راهنما: {hint}</div>}
+      {hint && <div className="hint">راهنمایی: {hint}</div>}
       <div className="guesses-list" dir="rtl">
         {guesses.map((g, idx) => (
           <div key={idx} className="guess-row" dir="rtl">
@@ -282,39 +279,52 @@ export default function Game() {
           margin-bottom: 1.2em;
           color: #000 !important;
         }
-        .letter-box, .input-box { color: #222; transition: background 0.2s, color 0.2s, border 0.2s; }
+        .input-row, .guess-row {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .letter-box, .input-box {
+          color: #222;
+          transition: background 0.2s, color 0.2s, border 0.2s;
+        }
         .letter-box {
-          display: inline-block;
-          width: 1.7em;
-          height: 1.7em;
-          line-height: 1.7em;
-          margin: 0 4px;
+          width: 2.1em;
+          height: 2.1em;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.25em;
+          margin: 0 2px;
           text-align: center;
           font-weight: bold;
           border-radius: 7px;
-          font-size: 1.1em;
           border: 2px solid #bdbdbd;
           background: #f5f7fa;
           box-shadow: 0 2px 8px 0 #e0e7ef44;
           animation: popin 0.3s cubic-bezier(.68,-0.55,.27,1.55);
+          box-sizing: border-box;
         }
         .input-char {
           background: #fff;
           border: 2px solid #bdbdbd;
           outline: none;
-          font-size: 1.1em;
+          font-size: 1.25em;
           font-weight: bold;
           text-transform: uppercase;
           padding: 0;
-          margin: 0 4px;
-          width: 1.7em;
-          height: 1.7em;
+          margin: 0 2px;
+          width: 2.1em;
+          height: 2.1em;
           text-align: center;
           border-radius: 7px;
           box-shadow: 0 2px 8px 0 #e0e7ef22;
           transition: border 0.2s, box-shadow 0.2s;
-          text-align: center;
           vertical-align: middle;
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         .input-char:focus {
           border: 2px solid #1976d2;
@@ -484,9 +494,9 @@ export default function Game() {
         }
         @media (max-width: 480px) {
           .game-container {
-            max-width: 98vw;
-            padding: 0.7rem 0.2rem 0.7rem 0.2rem;
-            border-radius: 10px;
+            max-width: 99vw;
+            padding: 0.5rem 0.1rem 0.5rem 0.1rem;
+            border-radius: 8px;
           }
           .logo-title {
             margin-bottom: 0.5em;
@@ -495,14 +505,16 @@ export default function Game() {
             font-size: 1em;
           }
           .letter-box, .input-char {
-            width: 1.2em;
-            height: 1.2em;
-            font-size: 0.95em;
+            width: 1.7em;
+            height: 1.7em;
+            font-size: 1em;
             border-radius: 5px;
+            min-width: 1.7em;
+            min-height: 1.7em;
+            margin: 0 1px;
           }
-          .input-row {
-            min-height: 1.3em;
-            margin-bottom: 0.5em;
+          .input-row, .guess-row {
+            min-height: 1.7em;
           }
           .success-message, .fail-message {
             font-size: 0.95em;
