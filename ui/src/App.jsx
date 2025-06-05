@@ -1,8 +1,17 @@
-import Game from './components/Game'
-import './App.css'
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import Game from './components/Game';
+import About from './components/About';
+import './App.css';
 
 function App() {
-  return <Game />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Game />} />
+        <Route path="/about" element={<About />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;

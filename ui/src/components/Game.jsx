@@ -117,6 +117,10 @@ export default function Game() {
   // Share handler
   const handleShare = async () => {
     if (!gameRef.current) return;
+    // Hide share modal before screenshot
+    setShowShareModal(false);
+    // Wait for modal to disappear from DOM
+    await new Promise(r => setTimeout(r, 200));
     // Hide letters before screenshot (clear them)
     const guessRows = gameRef.current.querySelectorAll('.guesses-list .guess-row');
     const originalLetters = [];
@@ -139,6 +143,7 @@ export default function Game() {
             span.textContent = originalLetters[i][j];
           });
         });
+        setShowShareModal(true); // Restore modal after screenshot
         if (!blob) return;
         const file = new File([blob], 'guess-what-result.png', { type: 'image/png' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -162,7 +167,6 @@ export default function Game() {
         }
       }, 'image/png');
     });
-    setShowShareModal(false);
   };
 
   // Close modal on outside click
