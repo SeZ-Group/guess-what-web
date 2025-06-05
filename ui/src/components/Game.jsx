@@ -38,6 +38,7 @@ export default function Game() {
   const inputRefs = useRef([]);
   const gameRef = useRef(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showShareLink, setShowShareLink] = useState(false);
 
   useEffect(() => {
     getTodayWordInfo().then(data => {
@@ -117,11 +118,8 @@ export default function Game() {
   // Share handler
   const handleShare = async () => {
     if (!gameRef.current) return;
-    // Hide share modal before screenshot
     setShowShareModal(false);
-    // Wait for modal to disappear from DOM
     await new Promise(r => setTimeout(r, 200));
-    // Hide letters before screenshot (clear them)
     const guessRows = gameRef.current.querySelectorAll('.guesses-list .guess-row');
     const originalLetters = [];
     guessRows.forEach(row => {
@@ -133,17 +131,16 @@ export default function Game() {
       });
       originalLetters.push(rowLetters);
     });
-    // Capture the whole game container
     await html2canvas(gameRef.current, {useCORS: true, backgroundColor: null}).then(canvas => {
       canvas.toBlob(async (blob) => {
-        // Restore original letters
         guessRows.forEach((row, i) => {
           const spans = row.querySelectorAll('.letter-box');
           spans.forEach((span, j) => {
             span.textContent = originalLetters[i][j];
           });
         });
-        setShowShareModal(true); // Restore modal after screenshot
+        setShowShareModal(true);
+        setShowShareLink(true);
         if (!blob) return;
         const file = new File([blob], 'guess-what-result.png', { type: 'image/png' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -157,7 +154,6 @@ export default function Game() {
             // کاربر شیر را کنسل کرد
           }
         } else {
-          // دانلود تصویر برای کاربرانی که Web Share ندارند
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -208,6 +204,11 @@ export default function Game() {
             </div>
             <div className="share-modal-title">دوست داری نتیجه‌ات رو با بقیه به اشتراک بذاری؟</div>
             <button className="share-btn-modal" onClick={handleShare}>اشتراک‌گذاری</button>
+            {showShareLink && (
+              <a className="share-link" href="https://guesswhat.darkube.app/" target="_blank" rel="noopener noreferrer">
+               https://guesswhat.darkube.app/
+              </a>
+            )}
           </div>
         </div>
       )}
@@ -496,6 +497,16 @@ export default function Game() {
           color: #888;
           font-size: 0.98em;
         }
+        .share-link {
+          display: block;
+          margin-top: 1.2em;
+          text-align: center;
+          color: #1976d2;
+          font-weight: bold;
+          font-size: 1.08em;
+          text-decoration: underline;
+          word-break: break-all;
+        }
         @media (max-width: 480px) {
           .game-container {
             max-width: 99vw;
@@ -514,11 +525,11 @@ export default function Game() {
             font-size: 1em;
             border-radius: 5px;
             min-width: 1.7em;
-            min-height: 1.7em;
+            min-height: 1.em;
             margin: 0 1px;
           }
           .input-row, .guess-row {
-            min-height: 1.7em;
+            min-height: 1.5em;
           }
           .success-message, .fail-message {
             font-size: 0.95em;
