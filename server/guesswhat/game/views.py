@@ -7,8 +7,16 @@ from .models import DailyWord, Guess
 from .serializers import DailyWordSerializer, GuessSerializer
 from django.shortcuts import get_object_or_404
 from datetime import date
+import os
 
-# Create your views here.
+
+# Load valid words from both assets/distinct_words.txt and assets/big.txt
+ASSETS_DIR = os.path.join(os.path.dirname(__file__), 'assets')
+word_files = ['distinct_words.txt', 'big.txt']
+VALID_WORDS = set()
+for fname in word_files:
+    with open(os.path.join(ASSETS_DIR, fname), encoding='utf-8') as f:
+        VALID_WORDS.update(line.strip().lower() for line in f if line.strip())
 
 # Admin: Set or update today's word/config
 class DailyWordAdminView(APIView):
@@ -47,6 +55,9 @@ class SubmitGuessView(APIView):
         user_identifier = request.data.get('user_identifier')
         if not user_identifier or not guess_text:
             return Response({'error': 'Missing user_identifier or guess.'}, status=400)
+        # Check if guess is a valid word
+        if guess_text not in VALID_WORDS:
+            return Response({'error': 'کلمه‌ت بی‌معنیه!'}, status=400)
         # Count previous attempts
         prev_attempts = Guess.objects.filter(word=daily_word, user_identifier=user_identifier).count()
         if prev_attempts >= daily_word.max_attempts:
