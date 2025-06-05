@@ -23,6 +23,10 @@ function isSuccess(guessResult, wordLength) {
   return guessResult && guessResult.length === wordLength && guessResult.every(c => c === 'green');
 }
 
+function toFarsiNumber(n) {
+  return n.toString().replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+}
+
 export default function Game() {
   const [wordInfo, setWordInfo] = useState(null);
   const [guesses, setGuesses] = useState([]);
@@ -113,30 +117,54 @@ export default function Game() {
   // Share handler
   const handleShare = async () => {
     if (!gameRef.current) return;
-    const canvas = await html2canvas(gameRef.current, {useCORS: true, backgroundColor: null});
-    canvas.toBlob(async (blob) => {
-      if (!blob) return;
-      const file = new File([blob], 'guess-what-result.png', { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: 'نتیجه بازی حدس کلمه!',
-            text: 'من تونستم کلمه امروز رو تو بازی حدس کلمه پیدا کنم! تو هم امتحان کن!'
+    // Hide letters before screenshot
+    const guessRows = gameRef.current.querySelectorAll('.guesses-list .guess-row');
+    const originalLetters = [];
+    guessRows.forEach(row => {
+      const spans = row.querySelectorAll('.letter-box');
+      const rowLetters = [];
+      spans.forEach(span => {
+        rowLetters.push(span.textContent);
+        span.textContent = '●';
+      });
+      originalLetters.push(rowLetters);
+    });
+    // Capture only the guesses-list
+    const guessesList = gameRef.current.querySelector('.guesses-list');
+    if (guessesList) {
+      await html2canvas(guessesList, {useCORS: true, backgroundColor: null}).then(canvas => {
+        canvas.toBlob(async (blob) => {
+          // Restore original letters
+          guessRows.forEach((row, i) => {
+            const spans = row.querySelectorAll('.letter-box');
+            spans.forEach((span, j) => {
+              span.textContent = originalLetters[i][j];
+            });
           });
-        } catch (err) {
-          // کاربر شیر را کنسل کرد
-        }
-      } else {
-        // دانلود تصویر برای کاربرانی که Web Share ندارند
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'guess-what-result.png';
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    }, 'image/png');
+          if (!blob) return;
+          const file = new File([blob], 'guess-what-result.png', { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: 'نتیجه بازی حدس کلمه!',
+                text: 'من تونستم کلمه امروز رو تو بازی حدس کلمه پیدا کنم! تو هم امتحان کن!'
+              });
+            } catch (err) {
+              // کاربر شیر را کنسل کرد
+            }
+          } else {
+            // دانلود تصویر برای کاربرانی که Web Share ندارند
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'guess-what-result.png';
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+        }, 'image/png');
+      });
+    }
     setShowShareModal(false);
   };
 
@@ -151,17 +179,16 @@ export default function Game() {
     <div className="game-container" ref={gameRef}>
       <div className="logo-title">
         <h2>Guess What?</h2>
-        <span className="logo-emoji" role="img" aria-label="guess">🤔</span>
+        {/* <span className="logo-emoji" role="img" aria-label="guess">🤔</span> */}
       </div>
       {wordInfo && (
         <div className="attempts-info">
-          <p>تلاش: {guesses.length} از {maxAttempts}</p>
-          <div className="guess-number">حدس <span>{guesses.length + 1}</span> از <span>{maxAttempts}</span></div>
+          <p>تلاش: {toFarsiNumber(guesses.length)} از {toFarsiNumber(maxAttempts)}</p>
         </div>
       )}
       {isWin && (
         <>
-          <div className="success-message" dir='rtl'>🎉 عالی بودی!</div>
+          <div className="success-message" dir='rtl'> عالی بودی! 🎉</div>
         </>
       )}
       {isFail && (
@@ -174,7 +201,10 @@ export default function Game() {
       {showShareModal && (
         <div className="share-modal-bg" onClick={handleModalBackgroundClick}>
           <div className="share-modal" dir="rtl">
-            <button className="close-modal" onClick={() => setShowShareModal(false)} title="بستن" style={{right: '0.7em', left: 'unset'}}>&times;</button>
+            <div className="close-modal-wrapper">
+              <button className="close-modal" onClick={() => setShowShareModal(false)} title="بستن">&times;</button>
+              <span className="close-modal-label">بستن</span>
+            </div>
             <div className="share-modal-title">دوست داری نتیجه‌ات رو با بقیه به اشتراک بذاری؟</div>
             <button className="share-btn-modal" onClick={handleShare}>اشتراک‌گذاری</button>
           </div>
@@ -219,20 +249,20 @@ export default function Game() {
         }
         .game-container {
           background: #fff;
-          max-width: 430px;
-          margin: 2.5rem auto;
-          padding: 2.5rem 2rem 2rem 2rem;
+          max-width: 340px;
+          margin: 1.2rem auto;
+          padding: 1.2rem 0.7rem 1rem 0.7rem;
           border: 1px solid #e0e0e0;
-          border-radius: 20px;
+          border-radius: 16px;
           font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
-          box-shadow: 0 6px 32px 0 rgba(60,60,60,0.10);
+          box-shadow: 0 4px 16px 0 rgba(60,60,60,0.10);
         }
         .logo-title {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 0.5em;
-          margin-bottom: 1.2em;
+          margin-bottom: 0.7em;
         }
         .logo-emoji {
           font-size: 2.2em;
@@ -242,7 +272,7 @@ export default function Game() {
           text-align: center;
           color: #1976d2;
           margin: 0;
-          font-size: 1.7em;
+          font-size: 1.2em;
           font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
           font-weight: 700;
           letter-spacing: 0.01em;
@@ -250,18 +280,19 @@ export default function Game() {
         .attempts-info {
           text-align: center;
           margin-bottom: 1.2em;
+          color: #000 !important;
         }
         .letter-box, .input-box { color: #222; transition: background 0.2s, color 0.2s, border 0.2s; }
         .letter-box {
           display: inline-block;
-          width: 2.3em;
-          height: 2.3em;
-          line-height: 2.3em;
+          width: 1.7em;
+          height: 1.7em;
+          line-height: 1.7em;
           margin: 0 4px;
           text-align: center;
           font-weight: bold;
-          border-radius: 10px;
-          font-size: 1.6em;
+          border-radius: 7px;
+          font-size: 1.1em;
           border: 2px solid #bdbdbd;
           background: #f5f7fa;
           box-shadow: 0 2px 8px 0 #e0e7ef44;
@@ -271,15 +302,15 @@ export default function Game() {
           background: #fff;
           border: 2px solid #bdbdbd;
           outline: none;
-          font-size: 1.6em;
+          font-size: 1.1em;
           font-weight: bold;
           text-transform: uppercase;
           padding: 0;
           margin: 0 4px;
-          width: 2.3em;
-          height: 2.3em;
+          width: 1.7em;
+          height: 1.7em;
           text-align: center;
-          border-radius: 10px;
+          border-radius: 7px;
           box-shadow: 0 2px 8px 0 #e0e7ef22;
           transition: border 0.2s, box-shadow 0.2s;
           text-align: center;
@@ -294,8 +325,8 @@ export default function Game() {
         .letter-red { background: #e57373 !important; color: #fff !important; border-color: #b71c1c !important; }
         .error { color: #d32f2f; margin-top: 1em; text-align: center; font-weight: bold; }
         .hint { color: #1976d2; margin-top: 1em; text-align: center; font-weight: bold; }
-        .success-message { color: #388e3c; background: #e8f5e9; border: 1px solid #388e3c; border-radius: 10px; padding: 1em; margin: 1em 0; text-align: center; font-size: 1.15em; font-weight: bold; box-shadow: 0 2px 8px 0 #388e3c22; }
-        .fail-message { color: #b71c1c; background: #ffebee; border: 1px solid #b71c1c; border-radius: 10px; padding: 1em; margin: 1em 0; text-align: center; font-size: 1.15em; font-weight: bold; box-shadow: 0 2px 8px 0 #b71c1c22; }
+        .success-message { color: #388e3c; background: #e8f5e9; border: 1px solid #388e3c; border-radius: 10px; padding: 0.7em; margin: 1em 0; text-align: center; font-size: 1em; font-weight: bold; box-shadow: 0 2px 8px 0 #388e3c22; }
+        .fail-message { color: #b71c1c; background: #ffebee; border: 1px solid #b71c1c; border-radius: 10px; padding: 0.7em; margin: 1em 0; text-align: center; font-size: 1em; font-weight: bold; box-shadow: 0 2px 8px 0 #b71c1c22; }
         .guesses-list {
           margin-top: 1.7em;
           direction: rtl;
@@ -309,18 +340,18 @@ export default function Game() {
         .input-row {
           display: flex;
           justify-content: center;
-          margin-bottom: 1.3em;
+          margin-bottom: 0.8em;
           position: relative;
-          min-height: 2.5em;
+          min-height: 2em;
         }
         button[type="submit"] {
           width: 100%;
           background: linear-gradient(90deg, #1976d2 0%, #64b5f6 100%);
           color: #fff;
           border: none;
-          border-radius: 10px;
-          padding: 0.9em 0;
-          font-size: 1.15em;
+          border-radius: 7px;
+          padding: 0.6em 0;
+          font-size: 1em;
           font-weight: bold;
           margin-top: 0.5em;
           cursor: pointer;
@@ -340,9 +371,9 @@ export default function Game() {
         .guess-number {
           color: #fff;
           background: linear-gradient(90deg, #1976d2 0%, #64b5f6 100%);
-          border-radius: 8px;
-          padding: 0.3em 1.1em;
-          font-size: 1.15em;
+          border-radius: 6px;
+          padding: 0.2em 0.7em;
+          font-size: 1em;
           font-weight: bold;
           margin: 0.5em auto 0.2em auto;
           display: inline-block;
@@ -361,9 +392,9 @@ export default function Game() {
           background: linear-gradient(90deg, #43a047 0%, #64b5f6 100%);
           color: #fff;
           border: none;
-          border-radius: 10px;
-          padding: 0.9em 0;
-          font-size: 1.1em;
+          border-radius: 7px;
+          padding: 0.7em 0;
+          font-size: 1em;
           font-weight: bold;
           cursor: pointer;
           box-shadow: 0 2px 8px 0 #43a04722;
@@ -384,42 +415,59 @@ export default function Game() {
         }
         .share-modal {
           background: #fff;
-          border-radius: 16px;
+          border-radius: 12px;
           box-shadow: 0 8px 32px 0 #1976d244;
-          padding: 2.2em 1.5em 1.5em 1.5em;
-          min-width: 320px;
+          padding: 1.2em 0.7em 1em 0.7em;
+          min-width: 220px;
           max-width: 90vw;
           position: relative;
           text-align: center;
+          padding-top: 1.2em;
         }
-        .close-modal {
+        .close-modal-wrapper {
           position: absolute;
           top: 0.7em;
           right: 0.7em;
+          display: flex;
+          align-items: center;
+          gap: 0.3em;
+          z-index: 10;
+        }
+        .close-modal {
           background: none;
           border: none;
           font-size: 2em;
           color: #888;
           cursor: pointer;
           transition: color 0.2s;
+          line-height: 1;
+          padding: 0;
         }
         .close-modal:hover {
           color: #d32f2f;
+        }
+        .close-modal-label {
+          color: #888;
+          font-size: 1em;
+          font-weight: 500;
+          cursor: pointer;
+          user-select: none;
         }
         .share-modal-title {
           font-size: 1.2em;
           font-weight: bold;
           margin-bottom: 1.2em;
           color: #1976d2;
+          margin-top: 1.7em;
         }
         .share-btn-modal {
           width: 100%;
           background: linear-gradient(90deg, #43a047 0%, #64b5f6 100%);
           color: #fff;
           border: none;
-          border-radius: 10px;
-          padding: 0.9em 0;
-          font-size: 1.1em;
+          border-radius: 7px;
+          padding: 0.7em 0;
+          font-size: 1em;
           font-weight: bold;
           cursor: pointer;
           box-shadow: 0 2px 8px 0 #43a04722;
@@ -433,6 +481,66 @@ export default function Game() {
         .share-modal-tip {
           color: #888;
           font-size: 0.98em;
+        }
+        @media (max-width: 480px) {
+          .game-container {
+            max-width: 98vw;
+            padding: 0.7rem 0.2rem 0.7rem 0.2rem;
+            border-radius: 10px;
+          }
+          .logo-title {
+            margin-bottom: 0.5em;
+          }
+          h2 {
+            font-size: 1em;
+          }
+          .letter-box, .input-char {
+            width: 1.2em;
+            height: 1.2em;
+            font-size: 0.95em;
+            border-radius: 5px;
+          }
+          .input-row {
+            min-height: 1.3em;
+            margin-bottom: 0.5em;
+          }
+          .success-message, .fail-message {
+            font-size: 0.95em;
+            padding: 0.5em;
+            border-radius: 7px;
+          }
+          .guess-number {
+            font-size: 0.95em;
+            padding: 0.15em 0.5em;
+            border-radius: 4px;
+          }
+          button[type="submit"] {
+            font-size: 0.95em;
+            padding: 0.5em 0;
+            border-radius: 5px;
+          }
+          .share-modal {
+            min-width: 120px;
+            padding: 1.2em 0.2em 0.7em 0.2em;
+            border-radius: 8px;
+            padding-top: 1.2em;
+          }
+          .share-btn-modal, .share-btn {
+            font-size: 0.95em;
+            border-radius: 5px;
+            padding: 0.5em 0;
+          }
+          .share-modal-title {
+            margin-top: 1.3em;
+          }
+          .close-modal-wrapper {
+            top: 0.5em;
+            right: 0.5em;
+            gap: 0.2em;
+          }
+          .close-modal-label {
+            font-size: 0.95em;
+          }
         }
       `}</style>
     </div>
