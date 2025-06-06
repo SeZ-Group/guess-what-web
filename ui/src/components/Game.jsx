@@ -38,7 +38,6 @@ export default function Game() {
   const inputRefs = useRef([]);
   const gameRef = useRef(null);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showShareLink, setShowShareLink] = useState(false);
 
   useEffect(() => {
     getTodayWordInfo().then(data => {
@@ -118,8 +117,7 @@ export default function Game() {
   // Share handler
   const handleShare = async () => {
     if (!gameRef.current) return;
-    setShowShareModal(false);
-    await new Promise(r => setTimeout(r, 200));
+    // Hide letters before screenshot (clear them)
     const guessRows = gameRef.current.querySelectorAll('.guesses-list .guess-row');
     const originalLetters = [];
     guessRows.forEach(row => {
@@ -131,29 +129,29 @@ export default function Game() {
       });
       originalLetters.push(rowLetters);
     });
+    // Capture the whole game container
     await html2canvas(gameRef.current, {useCORS: true, backgroundColor: null}).then(canvas => {
       canvas.toBlob(async (blob) => {
+        // Restore original letters
         guessRows.forEach((row, i) => {
           const spans = row.querySelectorAll('.letter-box');
           spans.forEach((span, j) => {
             span.textContent = originalLetters[i][j];
           });
         });
-        setShowShareModal(true);
-        setShowShareLink(true);
         if (!blob) return;
         const file = new File([blob], 'guess-what-result.png', { type: 'image/png' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
               files: [file],
-              title: 'نتیجه بازی حدس کلمه!',
               text: 'https://guesswhat.darkube.app/'
             });
           } catch (err) {
             // کاربر شیر را کنسل کرد
           }
         } else {
+          // دانلود تصویر برای کاربرانی که Web Share ندارند
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -163,6 +161,7 @@ export default function Game() {
         }
       }, 'image/png');
     });
+    setShowShareModal(false);
   };
 
   // Close modal on outside click
@@ -202,13 +201,13 @@ export default function Game() {
               <button className="close-modal" onClick={() => setShowShareModal(false)} title="بستن">&times;</button>
               <span className="close-modal-label">بستن</span>
             </div>
-            <div className="share-modal-title">دوست داری نتیجه‌ات رو با بقیه به اشتراک بذاری؟</div>
+            <div className="share-modal-title">
+                <div style={{ textAlign: 'center' }}>عالی بودی!</div>
+                <div style={{ direction: 'rtl', textAlign: 'right' }}>
+                    دوست داری نتیجه‌ات رو با بقیه به اشتراک بذاری؟
+                </div>
+            </div>
             <button className="share-btn-modal" onClick={handleShare}>اشتراک‌گذاری</button>
-            {showShareLink && (
-              <a className="share-link" href="https://guesswhat.darkube.app/" target="_blank" rel="noopener noreferrer">
-               https://guesswhat.darkube.app/
-              </a>
-            )}
           </div>
         </div>
       )}
@@ -469,7 +468,7 @@ export default function Game() {
           user-select: none;
         }
         .share-modal-title {
-          font-size: 1.2em;
+          font-size: 1.0em;
           font-weight: bold;
           margin-bottom: 1.2em;
           color: #1976d2;
@@ -496,16 +495,6 @@ export default function Game() {
         .share-modal-tip {
           color: #888;
           font-size: 0.98em;
-        }
-        .share-link {
-          display: block;
-          margin-top: 1.2em;
-          text-align: center;
-          color: #1976d2;
-          font-weight: bold;
-          font-size: 1.08em;
-          text-decoration: underline;
-          word-break: break-all;
         }
         @media (max-width: 480px) {
           .game-container {
