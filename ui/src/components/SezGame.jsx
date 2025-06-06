@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getTodayWordInfo, submitGuess, getGuesses } from '../api/gameApi';
+import { getSezWordInfo, submitSezGuess, getSezGuesses } from '../api/gameApi';
 import html2canvas from 'html2canvas';
 
 const USER_ID_KEY = 'guess-what-user-id';
@@ -27,7 +27,7 @@ function toFarsiNumber(n) {
   return n.toString().replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
 }
 
-export default function Game() {
+export default function SezGame() {
   const [wordInfo, setWordInfo] = useState(null);
   const [guesses, setGuesses] = useState([]);
   const [guessArr, setGuessArr] = useState([]); // array of chars
@@ -37,21 +37,21 @@ export default function Game() {
   const userId = getUserId();
   const inputRefs = useRef([]);
   const gameRef = useRef(null);
-  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
-    getTodayWordInfo().then(data => {
+    getSezWordInfo().then(data => {
       setWordInfo(data);
       setGuessArr(Array(data.word_length).fill(''));
     });
-    getGuesses(userId).then(setGuesses);
+    getSezGuesses(userId).then(setGuesses);
   }, [userId]);
 
   const wordLength = wordInfo?.word_length || 0;
   const maxAttempts = wordInfo ? wordInfo.max_attempts : 7;
 
   const handleInputChange = (e, idx) => {
-    const val = e.target.value.replace(/[^a-zA-Zآ-ی]/g, '').slice(0, 1);
+    // Allow Farsi, English letters, and space
+    const val = e.target.value.replace(/[^a-zA-Zآ-ی\s]/g, '').slice(0, 1);
     const newArr = [...guessArr];
     newArr[idx] = val;
     setGuessArr(newArr);
@@ -89,7 +89,7 @@ export default function Game() {
     const guess = guessArr.join('').toLowerCase();
     if (!guess || guess.length !== guessArr.length || guessArr.includes('')) return;
     try {
-      const res = await submitGuess(userId, guess);
+      const res = await submitSezGuess(userId, guess);
       if (res.error) {
         setError(res.error === 'Max attempts reached.' ? 'تعداد تلاش‌های شما به پایان رسیده است.' : 'خطا: ' + res.error);
       } else {
@@ -109,11 +109,6 @@ export default function Game() {
   const isWin = lastGuess && isSuccess(lastGuess.result, wordLength);
   const isFail = guesses.length === maxAttempts && !isWin;
 
-  // Open share modal automatically on win
-  useEffect(() => {
-    if (isWin) setShowShareModal(true);
-  }, [isWin]);
-
   // Show hint if enough attempts have been made
   useEffect(() => {
     if (wordInfo && guesses.length >= wordInfo.hint_attempt) {
@@ -123,69 +118,10 @@ export default function Game() {
     }
   }, [wordInfo, guesses]);
 
-  // Share handler
-  const handleShare = async () => {
-    // Hide the share modal before screenshot
-    setShowShareModal(false);
-    await new Promise(r => setTimeout(r, 100)); // Wait for modal to hide
-    // Hide letters before screenshot (clear them)
-    const guessRows = gameRef.current.querySelectorAll('.guesses-list .guess-row');
-    const originalLetters = [];
-    guessRows.forEach(row => {
-      const spans = row.querySelectorAll('.letter-box');
-      const rowLetters = [];
-      spans.forEach(span => {
-        rowLetters.push(span.textContent);
-        span.textContent = '';
-      });
-      originalLetters.push(rowLetters);
-    });
-    // Capture only the game container
-    await html2canvas(gameRef.current, {useCORS: true, backgroundColor: null}).then(canvas => {
-      canvas.toBlob(async (blob) => {
-        // Restore original letters
-        guessRows.forEach((row, i) => {
-          const spans = row.querySelectorAll('.letter-box');
-          spans.forEach((span, j) => {
-            span.textContent = originalLetters[i][j];
-          });
-        });
-        if (!blob) return;
-        const file = new File([blob], 'guess-what-result.png', { type: 'image/png' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              files: [file],
-              text: 'https://guesswhat.darkube.app/'
-            });
-          } catch (err) {
-            // کاربر شیر را کنسل کرد
-          }
-        } else {
-          // دانلود تصویر برای کاربرانی که Web Share ندارند
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'guess-what-result.png';
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-      }, 'image/png');
-    });
-  };
-
-  // Close modal on outside click
-  const handleModalBackgroundClick = (e) => {
-    if (e.target.classList.contains('share-modal-bg')) {
-      setShowShareModal(false);
-    }
-  };
-
   return (
     <div className="game-container" ref={gameRef}>
       <div className="logo-title">
-        <h2>Guess What?</h2>
-        {/* <span className="logo-emoji" role="img" aria-label="guess">🤔</span> */}
+        <h2>Guess What? (Sez)</h2>
       </div>
       {wordInfo && (
         <div className="attempts-info">
@@ -194,31 +130,12 @@ export default function Game() {
       )}
       {isWin && (
         <>
-          <div className="success-message" dir='rtl'> عالی بودی! 🎉</div>
+          <div className="success-message" dir='rtl'> عالی بودی! ❤️</div>
         </>
       )}
       {isFail && (
         <div className="fail-message" dir='rtl'>
-           نشد دیگه اشکال نداره. 😢<br />
-          فردا یه روزه جدیده با یه کلمه جدید.
-        </div>
-      )}
-      {/* Share Modal */}
-      {showShareModal && (
-        <div className="share-modal-bg" onClick={handleModalBackgroundClick}>
-          <div className="share-modal" dir="rtl">
-            <div className="close-modal-wrapper">
-              <button className="close-modal" onClick={() => setShowShareModal(false)} title="بستن">&times;</button>
-              <span className="close-modal-label">بستن</span>
-            </div>
-            <div className="share-modal-title">
-                <div style={{ textAlign: 'center' }}>عالی بودی!</div>
-                <div style={{ direction: 'rtl', textAlign: 'right' }}>
-                    دوست داری نتیجه‌ات رو با بقیه به اشتراک بذاری؟
-                </div>
-            </div>
-            <button className="share-btn-modal" onClick={handleShare}>اشتراک‌گذاری</button>
-          </div>
+            فدای سرت عزیزم.<br />
         </div>
       )}
       <form onSubmit={handleGuess} autoComplete="off">
@@ -260,13 +177,20 @@ export default function Game() {
         }
         .game-container {
           background: #fff;
-          max-width: 340px;
-          margin: 1.2rem auto;
-          padding: 1.2rem 0.7rem 1rem 0.7rem;
-          border: 1px solid #e0e0e0;
-          border-radius: 16px;
+          width: 100vw;
+          height: 100vh;
+          min-height: 100vh;
+          min-width: 100vw;
+          margin: 0;
+          padding: 0;
+          border: none;
+          border-radius: 0;
           font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
-          box-shadow: 0 4px 16px 0 rgba(60,60,60,0.10);
+          box-shadow: none;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-start;
         }
         .logo-title {
           display: flex;
@@ -274,6 +198,7 @@ export default function Game() {
           justify-content: center;
           gap: 0.5em;
           margin-bottom: 0.7em;
+          margin-top: 2.5vh;
         }
         .logo-emoji {
           font-size: 2.2em;
@@ -501,72 +426,6 @@ export default function Game() {
         .share-btn-modal:hover {
           background: linear-gradient(90deg, #388e3c 0%, #42a5f5 100%);
           box-shadow: 0 4px 16px 0 #43a04744;
-        }
-        .share-modal-tip {
-          color: #888;
-          font-size: 0.98em;
-        }
-        @media (max-width: 480px) {
-          .game-container {
-            max-width: 99vw;
-            padding: 0.5rem 0.1rem 0.5rem 0.1rem;
-            border-radius: 8px;
-          }
-          .logo-title {
-            margin-bottom: 0.5em;
-          }
-          h2 {
-            font-size: 1em;
-          }
-          .letter-box, .input-char {
-            width: 1.7em;
-            height: 1.7em;
-            font-size: 1em;
-            border-radius: 5px;
-            min-width: 1.7em;
-            min-height: 1.em;
-            margin: 0 1px;
-          }
-          .input-row, .guess-row {
-            min-height: 1.5em;
-          }
-          .success-message, .fail-message {
-            font-size: 0.95em;
-            padding: 0.5em;
-            border-radius: 7px;
-          }
-          .guess-number {
-            font-size: 0.95em;
-            padding: 0.15em 0.5em;
-            border-radius: 4px;
-          }
-          button[type="submit"] {
-            font-size: 0.95em;
-            padding: 0.5em 0;
-            border-radius: 5px;
-          }
-          .share-modal {
-            min-width: 120px;
-            padding: 1.2em 0.2em 0.7em 0.2em;
-            border-radius: 8px;
-            padding-top: 1.2em;
-          }
-          .share-btn-modal, .share-btn {
-            font-size: 0.95em;
-            border-radius: 5px;
-            padding: 0.5em 0;
-          }
-          .share-modal-title {
-            margin-top: 1.3em;
-          }
-          .close-modal-wrapper {
-            top: 0.5em;
-            right: 0.5em;
-            gap: 0.2em;
-          }
-          .close-modal-label {
-            font-size: 0.95em;
-          }
         }
       `}</style>
     </div>

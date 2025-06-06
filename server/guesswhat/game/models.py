@@ -22,3 +22,13 @@ class Guess(models.Model):
 
     def __str__(self):
         return f"{self.user_identifier} - {self.word.date} - Attempt {self.attempt_number}"
+
+class SezWord(models.Model):
+    word = models.CharField(max_length=32)
+    hint = models.CharField(max_length=256, blank=True)
+    date = models.DateField(unique=True)
+    max_attempts = models.IntegerField(default=7)
+    hint_attempt = models.IntegerField(default=4)
+
+    def __str__(self):
+        return f"{self.date}: {self.word}"

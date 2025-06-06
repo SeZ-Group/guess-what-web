@@ -29,4 +29,23 @@ export async function setDailyWord({ word, hint, max_attempts, hint_attempt }) {
     body: JSON.stringify({ word, hint, max_attempts, hint_attempt })
   });
   return res.json();
+}
+
+export async function getSezWordInfo() {
+  const res = await fetch(`${API_BASE}/sez/today/`);
+  return res.json();
+}
+
+export async function submitSezGuess(user_identifier, guess) {
+  const res = await fetch(`${API_BASE}/sez/guess/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_identifier, guess })
+  });
+  return res.json();
+}
+
+export async function getSezGuesses(user_identifier) {
+  const res = await fetch(`${API_BASE}/sez/guesses/?user_identifier=${encodeURIComponent(user_identifier)}`);
+  return res.json();
 } 
