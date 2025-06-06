@@ -2,4 +2,4 @@
 server/guesswhat/venv/ 
 
 # Ignore SQLite database
-server/guesswhat/db.sqlite3 
+# server/guesswhat/db.sqlite3 

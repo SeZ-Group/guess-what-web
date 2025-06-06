@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getSezWordInfo, submitSezGuess, getSezGuesses } from '../api/gameApi';
 import html2canvas from 'html2canvas';
 
-const USER_ID_KEY = 'guess-what-user-id';
+const USER_ID_KEY = 'guess-what-sez-user-id';
 function getUserId() {
   let id = localStorage.getItem(USER_ID_KEY);
   if (!id) {
