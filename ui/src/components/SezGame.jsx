@@ -130,12 +130,12 @@ export default function SezGame() {
       )}
       {isWin && (
         <>
-          <div className="success-message" dir='rtl'> عالی بودی! ❤️</div>
+          <div className="success-message" dir='rtl'> دلم برات تنگ شده. مراقب خودت باش. ❤️</div>
         </>
       )}
       {isFail && (
         <div className="fail-message" dir='rtl'>
-            فدای سرت عزیزم.<br />
+           جریمه‌ت یه قهوه است وقتی همو دیدیم. ولی دوباره میتونی بزنی<br />
         </div>
       )}
       <form onSubmit={handleGuess} autoComplete="off">
