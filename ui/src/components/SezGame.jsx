@@ -135,7 +135,7 @@ export default function SezGame() {
       )}
       {isFail && (
         <div className="fail-message" dir='rtl'>
-           جریمه‌ت یه قهوه است وقتی همو دیدیم. ولی دوباره میتونی بزنی<br />
+           اشکال نداره تو رو هم خدا اینطوری آفریده. دوباره بزن.<br />
         </div>
       )}
       <form onSubmit={handleGuess} autoComplete="off">
